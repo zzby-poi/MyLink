@@ -1,0 +1,180 @@
+package client.view;
+
+import client.service.FileClientService;
+import client.service.ManageClientConnectServerThread;
+import client.service.MessageClientService;
+import client.service.UserClientService;
+import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+
+import java.net.Socket;
+
+//聊天界面
+public class ChatView extends Application {
+    private UserClientService userClientService;
+    private MessageClientService messageClientService;
+    private FileClientService fileClientService;
+
+    private String title;//标题即用户名
+    private String userId;//用户Id即线程
+    //private Socket socket;
+
+    public void setUserId(String userId) {//
+        this.userId = userId;
+    }
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+    public String getTitle() {
+        return title;
+    }
+
+    Stage primaryStage;
+
+    GridPane chatView=new GridPane();;
+    Scene scene=new Scene(chatView, 600, 800);
+    ScrollPane inSp;//滚动面板
+    VBox chatList;//垂直容器,存放所有消息气泡，并用滚动面板浏览
+
+    public ChatView(){//初始化
+        inSp=new ScrollPane();
+        chatList=new VBox();
+        //primaryStage.setScene(scene);
+        //primaryStage.initStyle(StageStyle.TRANSPARENT);//无窗口装饰
+        inSp.setPrefHeight(500);
+        chatList.setPrefWidth(500);
+        chatList.setSpacing(10);//垂直容器间距
+        chatList.setPrefWidth(500);
+        chatList.setSpacing(10);//垂直容器间距
+        inSp.setContent(chatList);
+        chatView.add(inSp,0,1,1,1);
+
+        //chatList.getChildren().add(new ChatBubble("你吃了吗没吃吃点米").getChatBubble("sender"));
+        //chatList.getChildren().add(new ChatBubble("一二三四五").getChatBubble("getter"));
+
+    }
+    /*public void inMessage(String message){//接收消息
+        chatList.getChildren().add(new ChatBubble(message).getChatBubble("sender"));
+        chatView.add(inSp,0,1,1,1);
+    }*/
+
+    /*public void refresh(VBox cl){
+        chatView.getChildren().remove(inSp);
+        inSp=new ScrollPane();
+        inSp.setContent(cl);
+        inSp.setPrefHeight(500);
+        chatView.add(inSp,0,1,1,1);
+    }*/
+    public void refresh(){//刷新窗口
+        chatView.getChildren().remove(inSp);
+        inSp=new ScrollPane();
+        inSp.setContent(chatList);
+        inSp.setPrefHeight(500);
+        chatView.add(inSp,0,1,1,1);
+        primaryStage.show();
+
+    }
+
+    public void setChatList(VBox chatList) {
+        this.chatList = chatList;
+    }
+    public VBox getChatList() {
+        return chatList;
+    }
+
+    public void start(Stage primaryStage) throws Exception {
+        this.primaryStage=primaryStage;
+        primaryStage.setTitle("用户界面");
+        Scene scene = new Scene(chatView, 600, 800);
+        primaryStage.setScene(scene);
+        primaryStage.initStyle(StageStyle.TRANSPARENT);//无窗口装饰
+
+        HBox top=new HBox();//水平容器，状态栏
+        top.setPrefSize(600,30);
+        top.setPadding(new Insets(5,0,0,0));
+        DragUtil.addDragListener(primaryStage, top);//设置拖动
+
+
+        Text WName_text=new Text(title);//标题文字
+        WName_text.setFont(Font.font(20));//文字大小
+        top.getChildren().add(WName_text);
+        top.setMargin(WName_text,new Insets(0,240,0,200));
+
+
+        Button close_btn=new Button("X");
+        top.getChildren().add(close_btn);
+        close_btn.setOnAction((ActionEvent e)->{//点击事件,关闭窗口
+
+            try {
+                //userClientService.logout();//退出系统
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+            //chatView.setVisible(false);//设置可见性
+
+            primaryStage.close();
+            //primaryStage.hide();
+        });
+        top.setMargin(close_btn,new Insets(0,0,0,0));
+        chatView.add(top,0,0,1,1);
+
+        //聊天消息框,滚动面板
+
+
+       /*ScrollPane inSp = new ScrollPane();//滚动面板
+        inSp.setPrefHeight(500);
+
+        VBox chatList=new VBox();//垂直容器,存放所有消息气泡，并用滚动面板浏览
+        chatList.setPrefWidth(500);
+        chatList.setSpacing(10);//垂直容器间距
+
+        chatList.getChildren().add(new ChatBubble("你吃了吗没吃吃点米").getChatBubble("sender"));
+        chatList.getChildren().add(new ChatBubble("一二三四五").getChatBubble("getter"));
+
+        inSp.setContent(chatList);
+        chatView.add(inSp,0,1,1,1);*/
+
+        //输入框
+        TextArea outText=new TextArea();//输入框
+        outText.setPadding(new Insets(10,0,0,0));
+        outText.setMaxHeight(200); // 设置多行输入框的最大高度
+        //area.setMaxWidth(300); // 设置多行输入框的最大宽度
+        outText.setPrefSize(500, 150); // 设置多行输入框的推荐宽高
+        outText.setEditable(true); // 设置多行输入框能否编辑
+        outText.setPromptText("请输入文字..."); // 设置多行输入框的提示语
+        outText.setWrapText(true); // 设置多行输入框是否支持自动换行。true表示支持，false表示不支持。
+
+        chatView.add(outText,0,2,1,1);
+
+        //功能按钮
+        HBox hBox1=new HBox();
+        hBox1.setPadding(new Insets(10,0,0,480));
+
+        Button sendBtn=new Button("发送");
+        sendBtn.setPrefSize(100,30);
+
+        hBox1.getChildren().add(sendBtn);
+        chatView.add(hBox1,0,3,1,1);
+        primaryStage.show();
+    }
+
+}
